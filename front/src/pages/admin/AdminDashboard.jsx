@@ -72,7 +72,7 @@ const AdminDashboard = () => {
     },
     {
       title: 'Total Revenue',
-      value: `$${stats.totalRevenue.toLocaleString()}`,
+      value: `Rs. ${stats.totalRevenue.toLocaleString()}`,
       icon: FaDollarSign,
       color: 'bg-yellow-500',
       change: '+15%',
@@ -201,7 +201,7 @@ const AdminDashboard = () => {
                         {booking.date} at {booking.time}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${booking.amount}
+                        Rs. {booking.amount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span

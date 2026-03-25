@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
-import { FaFutbol, FaPlus, FaEdit, FaTrash, FaSearch, FaMapMarkerAlt, FaDollarSign, FaUsers } from 'react-icons/fa'
+import { FaFutbol, FaPlus, FaEdit, FaTrash, FaSearch, FaMapMarkerAlt, FaDollarSign, FaUsers, FaExclamationCircle, FaCheckCircle } from 'react-icons/fa'
 
 const AdminCourts = () => {
   const [courts, setCourts] = useState([])
@@ -9,6 +9,8 @@ const AdminCourts = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingCourt, setEditingCourt] = useState(null)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -27,8 +29,14 @@ const AdminCourts = () => {
     try {
       const response = await api.get('/courts/manage/')
       setCourts(response.data || [])
+      setError(null)
     } catch (error) {
       console.error('Error fetching courts:', error)
+      if (error.response?.status === 403) {
+        setError('❌ Admin access denied. You are not authorized to view this page.')
+      } else if (error.response?.status === 401) {
+        setError('❌ Your session has expired. Please log in again.')
+      }
       setCourts([])
     } finally {
       setLoading(false)
@@ -50,16 +58,29 @@ const AdminCourts = () => {
 
   const handleDelete = async (courtId) => {
     if (!window.confirm('Are you sure you want to delete this court?')) return
+    setError(null)
     try {
       await api.delete(`/courts/manage/${courtId}/`)
       setCourts((prev) => prev.filter((court) => court.id !== courtId))
+      setSuccess('Court deleted successfully!')
+      setTimeout(() => setSuccess(null), 2000)
     } catch (error) {
       console.error('Error deleting court:', error)
+      if (error.response?.status === 403) {
+        setError('❌ Admin access denied. Please log out and log back in.')
+      } else if (error.response?.status === 401) {
+        setError('❌ Your session has expired. Please log in again.')
+      } else {
+        setError('❌ Failed to delete court. Please try again.')
+      }
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError(null)
+    setSuccess(null)
+    
     try {
       const payload = {
         name: formData.name,
@@ -67,21 +88,46 @@ const AdminCourts = () => {
         price_per_hour: parseFloat(formData.price_per_hour) || 0,
         capacity: parseInt(formData.capacity, 10) || 10,
         description: formData.description || '',
-        image_url: formData.image || null,
         is_active: true,
       }
+
       if (editingCourt) {
         const response = await api.put(`/courts/manage/${editingCourt.id}/`, payload)
         setCourts((prev) => prev.map((c) => (c.id === editingCourt.id ? response.data : c)))
+        setSuccess('Court updated successfully!')
       } else {
         const response = await api.post('/courts/manage/', payload)
         setCourts((prev) => [...prev, response.data])
+        setSuccess('Court added successfully!')
       }
-      setShowModal(false)
-      setEditingCourt(null)
-      setFormData({ name: '', location: '', price_per_hour: '', capacity: '', description: '', image: '' })
+
+      setTimeout(() => {
+        setShowModal(false)
+        setEditingCourt(null)
+        setFormData({ name: '', location: '', price_per_hour: '', capacity: '', description: '', image: '' })
+        setSuccess(null)
+      }, 1500)
     } catch (error) {
       console.error('Error saving court:', error)
+      
+      // Better error handling
+      if (error.response?.status === 403) {
+        setError('❌ Admin access denied. Please log out and log back in with your admin account.')
+      } else if (error.response?.status === 401) {
+        setError('❌ Your session has expired. Please log in again.')
+        setTimeout(() => navigate('/admin/login'), 2000)
+      } else if (error.response?.data?.detail) {
+        setError(`❌ Error: ${error.response.data.detail}`)
+      } else if (error.response?.data) {
+        const errorMsg = Object.entries(error.response.data)
+          .map(([key, value]) => `${key}: ${Array.isArray(value) ? value[0] : value}`)
+          .join(', ')
+        setError(`❌ Error: ${errorMsg}`)
+      } else if (error.message) {
+        setError(`❌ Error: ${error.message}`)
+      } else {
+        setError('❌ Failed to save court. Please try again.')
+      }
     }
   }
 
@@ -101,6 +147,26 @@ const AdminCourts = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* Error Notification */}
+      {error && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
+          <div className="bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+            <FaExclamationCircle className="text-xl" />
+            <span className="font-semibold">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Success Notification */}
+      {success && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2">
+          <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+            <FaCheckCircle className="text-xl" />
+            <span className="font-semibold">{success}</span>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -181,8 +247,8 @@ const AdminCourts = () => {
                       <span>{court.location}</span>
                     </div>
                     <div className="flex items-center text-gray-600">
-                      <FaDollarSign className="mr-2" />
-                      <span>${court.price_per_hour}/hour</span>
+                      <span className="mr-2 text-base font-bold">₨</span>
+                      <span>Rs. {court.price_per_hour}/hour</span>
                     </div>
                     <div className="flex items-center text-gray-600">
                       <FaUsers className="mr-2" />
@@ -252,7 +318,7 @@ const AdminCourts = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Price per Hour ($)
+                        Price per Hour (Rs.)
                       </label>
                       <input
                         type="number"

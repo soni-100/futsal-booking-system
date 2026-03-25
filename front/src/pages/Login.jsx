@@ -60,8 +60,13 @@ const Login = () => {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-              {error}
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-md shadow-sm">
+              <p className="font-semibold text-red-800">{error}</p>
+              {error.includes('Cannot connect') && (
+                <p className="text-sm mt-2 text-red-600">
+                  💡 Make sure your Django backend is running: `python manage.py runserver`
+                </p>
+              )}
             </div>
           )}
 

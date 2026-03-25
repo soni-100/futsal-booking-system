@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react'
 import api from '../services/api'
+import storage from '../services/storage'
 
 const AuthContext = createContext()
 
@@ -18,6 +19,15 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is logged in on mount
+    // Don't proceed with user auth if admin is logged in
+    const adminToken = localStorage.getItem('admin_token')
+    if (adminToken) {
+      // Admin is logged in, skip user auth
+      setLoading(false)
+      console.log('👤 Admin session detected, skipping user auth')
+      return
+    }
+
     const token = localStorage.getItem('token')
     if (token) {
       api.defaults.headers.common['Authorization'] = `Token ${token}`
@@ -34,7 +44,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true)
     } catch (error) {
       console.error('Error fetching user:', error)
-      localStorage.removeItem('token')
+      storage.removeItem('token')
       delete api.defaults.headers.common['Authorization']
     } finally {
       setLoading(false)
@@ -43,17 +53,44 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      console.log('🔐 Attempting login with:', { email })
       const response = await api.post('/auth/login/', { email, password })
+      console.log('✅ Login successful:', response.data)
       const { token, user } = response.data
-      localStorage.setItem('token', token)
+      storage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Token ${token}`
       setUser(user)
       setIsAuthenticated(true)
       return { success: true }
     } catch (error) {
-      const errData = error.response?.data
-      const errMsg = errData?.non_field_errors?.[0] || errData?.email?.[0] || errData?.password?.[0] || errData?.message || 'Login failed. Please try again.'
-      return { success: false, error: errMsg }
+      console.error('❌ Login Error Details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message,
+        request: error.config?.url,
+      })
+
+      // Better error handling
+      if (error.response?.status === 403) {
+        const errorData = error.response.data
+        console.error('🚫 403 Response Data:', errorData)
+        return { success: false, error: `❌ 403 Forbidden: ${JSON.stringify(errorData)}` }
+      } else if (error.response?.status === 400) {
+        const errData = error.response.data
+        const errMsg = errData?.non_field_errors?.[0] || 
+                       errData?.email?.[0] || 
+                       errData?.password?.[0] || 
+                       errData?.message || 
+                       'Invalid email or password'
+        return { success: false, error: `❌ ${errMsg}` }
+      } else if (error.response?.status === 401) {
+        return { success: false, error: '❌ Invalid email or password' }
+      } else if (error.code === 'ECONNREFUSED' || error.message === 'Network Error') {
+        return { success: false, error: '❌ Cannot connect to server. Make sure backend is running on http://localhost:8000' }
+      } else {
+        return { success: false, error: `❌ Login failed: ${error.message}` }
+      }
     }
   }
 
@@ -61,7 +98,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/auth/register/', userData)
       const { token, user } = response.data
-      localStorage.setItem('token', token)
+      storage.setItem('token', token)
       api.defaults.headers.common['Authorization'] = `Token ${token}`
       setUser(user)
       setIsAuthenticated(true)
@@ -77,7 +114,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
+    storage.removeItem('token')
     delete api.defaults.headers.common['Authorization']
     setUser(null)
     setIsAuthenticated(false)

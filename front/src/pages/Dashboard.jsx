@@ -181,7 +181,7 @@ const Dashboard = () => {
                         {booking.duration} {booking.duration === 1 ? 'hour' : 'hours'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${booking.total_price}
+                        Rs. {booking.total_price}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span

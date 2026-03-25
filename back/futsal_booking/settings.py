@@ -2,25 +2,21 @@
 Django settings for futsal_booking project.
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-try:
-    from decouple import config
-    SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
-    DEBUG = config('DEBUG', default=True, cast=bool)
-except ImportError:
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
-    DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = 'django-insecure-your-secret-key-change-in-production'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
 
+ALLOWED_HOSTS = ['*']
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -67,30 +63,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'futsal_booking.wsgi.application'
 
-
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-    # Uncomment for PostgreSQL:
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': config('DB_NAME', default='futsal_booking'),
-    #     'USER': config('DB_USER', default='postgres'),
-    #     'PASSWORD': config('DB_PASSWORD', default=''),
-    #     'HOST': config('DB_HOST', default='localhost'),
-    #     'PORT': config('DB_PORT', default='5432'),
-    # }
 }
 
-
 # Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -106,37 +87,27 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = 'media/'
+# Media files
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Custom User Model
+# Custom user model
 AUTH_USER_MODEL = 'accounts.User'
 
-# REST Framework settings
+# REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
@@ -145,17 +116,34 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
 }
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
 
-# Email settings (for production)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# CSRF Settings - Trust origins from frontend
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+]
+
+CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF token
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# eSewa Payment Settings (Add your actual credentials)
+ESEWA_MERCHANT_ID = 'EPAYTEST'  # Test merchant ID
+ESEWA_SECRET_KEY = '8gBm/:&EnhH.1/q'  # Test secret key
+ESEWA_URL = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'  # Test URL
+ESEWA_SUCCESS_URL = 'http://localhost:8000/api/bookings/payment-success/'
+ESEWA_FAILURE_URL = 'http://localhost:8000/api/bookings/payment-failure/'
+FRONTEND_URL = 'http://localhost:3000'

@@ -13,6 +13,8 @@ import Courts from './pages/Courts'
 import Booking from './pages/Booking'
 import Dashboard from './pages/Dashboard'
 import Bookings from './pages/Bookings'
+import PaymentSuccess from './pages/PaymentSuccess'
+import PaymentFailed from './pages/PaymentFailed'
 import AdminLogin from './pages/admin/AdminLogin'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminCourts from './pages/admin/AdminCourts'
@@ -56,6 +58,8 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/payment-success/:bookingId" element={<PaymentSuccess />} />
+              <Route path="/payment-failed" element={<PaymentFailed />} />
             </Route>
 
             {/* Admin Routes */}

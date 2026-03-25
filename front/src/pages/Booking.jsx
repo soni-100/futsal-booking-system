@@ -58,6 +58,8 @@ const Booking = () => {
     setError('')
     setSubmitting(true)
 
+    const totalPrice = court ? court.price_per_hour * duration : 0
+
     try {
       const startParts = selectedTime.split(':')
       const startHour = parseInt(startParts[0], 10) || 0
@@ -65,7 +67,7 @@ const Booking = () => {
       const endTime = `${String(endHour).padStart(2, '0')}:00:00`
       const startTimeFormatted = selectedTime.length === 5 ? `${selectedTime}:00` : selectedTime
 
-      await api.post('/bookings/', {
+      const response = await api.post('/bookings/', {
         court_id: parseInt(courtId, 10),
         booking_date: selectedDate,
         start_time: startTimeFormatted,
@@ -73,8 +75,14 @@ const Booking = () => {
         duration,
         total_price: totalPrice,
       })
-      setSuccess(true)
-      setTimeout(() => navigate('/dashboard'), 2000)
+      
+      // Get the booking ID from response and initiate payment
+      const bookingId = response.data.id
+      const token = localStorage.getItem('token')
+      
+      // Redirect to payment endpoint with token in query parameter
+      window.location.href = `http://localhost:8000/api/bookings/pay/${bookingId}/?token=${token}`
+      
     } catch (err) {
       const errData = err.response?.data
       const msg = errData && typeof errData === 'object'
@@ -225,8 +233,7 @@ const Booking = () => {
                 <div className="flex justify-between pt-2 border-t border-gray-300">
                   <span className="font-semibold">Total Price:</span>
                   <span className="font-bold text-primary-600 text-xl">
-                    <FaDollarSign className="inline" />
-                    {totalPrice}
+                    Rs. {totalPrice.toFixed(2)}
                   </span>
                 </div>
               </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
-import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaDollarSign, FaTimes } from 'react-icons/fa'
+import storage from '../services/storage'
+import { FaCalendarAlt, FaClock, FaMapMarkerAlt, FaDollarSign, FaTimes, FaPaypal } from 'react-icons/fa'
 import { format } from 'date-fns'
 
 const Bookings = () => {
@@ -23,6 +24,7 @@ const Bookings = () => {
     duration: b.duration,
     total_price: parseFloat(b.total_price) || 0,
     status: b.status,
+    payment_status: b.payment_status,
   })
 
   const fetchBookings = async () => {
@@ -47,6 +49,17 @@ const Bookings = () => {
     }
   }
 
+  const handlePayment = (bookingId) => {
+    const token = storage.getItem('token')
+    if (!token) {
+      alert('Please log in to make a payment.')
+      return
+    }
+    // Redirect to backend payment endpoint
+    const paymentUrl = `http://localhost:8000/api/bookings/pay/${bookingId}/?token=${token}`
+    window.location.href = paymentUrl
+  }
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'confirmed':
@@ -55,6 +68,19 @@ const Bookings = () => {
         return 'bg-yellow-100 text-yellow-800'
       case 'cancelled':
         return 'bg-red-100 text-red-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getPaymentStatusColor = (status) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-green-100 text-green-800'
+      case 'pending':
+        return 'bg-orange-100 text-orange-800'
+      case 'refunded':
+        return 'bg-blue-100 text-blue-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -144,19 +170,41 @@ const Bookings = () => {
                   </div>
                   <div className="flex items-center text-gray-700">
                     <FaDollarSign className="mr-2 text-primary-600" />
-                    <span className="font-semibold">${booking.total_price}</span>
+                    <span className="font-semibold">Rs. {booking.total_price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                    <span className="text-sm text-gray-600">Payment Status:</span>
+                    <span
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${getPaymentStatusColor(
+                        booking.payment_status
+                      )}`}
+                    >
+                      {booking.payment_status.charAt(0).toUpperCase() + booking.payment_status.slice(1)}
+                    </span>
                   </div>
                 </div>
 
-                {booking.status !== 'cancelled' && (
-                  <button
-                    onClick={() => handleCancelBooking(booking.id)}
-                    className="w-full mt-4 px-4 py-2 text-red-600 border border-red-600 rounded-md hover:bg-red-50 transition-colors flex items-center justify-center space-x-2"
-                  >
-                    <FaTimes />
-                    <span>Cancel Booking</span>
-                  </button>
-                )}
+                <div className="space-y-2">
+                  {booking.payment_status === 'pending' && booking.status !== 'cancelled' && (
+                    <button
+                      onClick={() => handlePayment(booking.id)}
+                      className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 font-semibold"
+                    >
+                      <FaPaypal />
+                      <span>Pay Now (eSewa)</span>
+                    </button>
+                  )}
+
+                  {booking.status !== 'cancelled' && (
+                    <button
+                      onClick={() => handleCancelBooking(booking.id)}
+                      className="w-full mt-2 px-4 py-2 text-red-600 border border-red-600 rounded-md hover:bg-red-50 transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <FaTimes />
+                      <span>Cancel Booking</span>
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -167,3 +215,4 @@ const Bookings = () => {
 }
 
 export default Bookings
+

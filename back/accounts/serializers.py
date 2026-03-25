@@ -30,15 +30,22 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             phone=validated_data.get('phone', ''),
+            is_active=True  # Ensure user is active immediately after registration
         )
         return user
 
 
 class UserSerializer(serializers.ModelSerializer):
+    is_admin_user = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'date_joined', 'last_login')
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'date_joined', 'last_login', 'is_admin_user', 'is_staff', 'is_superuser')
         read_only_fields = ('id', 'date_joined', 'last_login')
+
+    def get_is_admin_user(self, obj):
+        """Check if user is admin (has any admin privilege)"""
+        return obj.is_staff or obj.is_admin or obj.is_superuser
 
 
 class UserLoginSerializer(serializers.Serializer):
@@ -46,17 +53,36 @@ class UserLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        email = attrs.get('email')
+        email = attrs.get('email', '').lower()  # Convert to lowercase for comparison
         password = attrs.get('password')
 
         if email and password:
-            # Try to authenticate using email as username
-            user = authenticate(username=email, password=password)
-            if not user:
-                raise serializers.ValidationError('Invalid email or password.')
-            if not user.is_active:
-                raise serializers.ValidationError('User account is disabled.')
-            attrs['user'] = user
+            # Try to find user by email (case-insensitive)
+            try:
+                # First, try to authenticate with the email
+                user = authenticate(username=email, password=password)
+                if user:
+                    if not user.is_active:
+                        raise serializers.ValidationError('User account is disabled.')
+                    attrs['user'] = user
+                    return attrs
+            except:
+                pass
+            
+            # If normal authenticate fails, try case-insensitive lookup
+            from django.contrib.auth import get_user_model
+            UserModel = get_user_model()
+            try:
+                user = UserModel.objects.get(email__iexact=email)
+                if user.check_password(password):
+                    if not user.is_active:
+                        raise serializers.ValidationError('User account is disabled.')
+                    attrs['user'] = user
+                    return attrs
+            except UserModel.DoesNotExist:
+                pass
+            
+            raise serializers.ValidationError('Invalid email or password.')
         else:
             raise serializers.ValidationError('Must include "email" and "password".')
 
@@ -68,18 +94,26 @@ class AdminLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        email = attrs.get('email')
+        email = attrs.get('email', '').lower()  # Convert to lowercase for comparison
         password = attrs.get('password')
 
         if email and password:
-            user = authenticate(username=email, password=password)
-            if not user:
-                raise serializers.ValidationError('Invalid email or password.')
-            if not user.is_active:
-                raise serializers.ValidationError('User account is disabled.')
-            if not (user.is_staff or user.is_admin or user.is_superuser):
-                raise serializers.ValidationError('You do not have admin privileges.')
-            attrs['user'] = user
+            # Try to find user by email (case-insensitive)
+            from django.contrib.auth import get_user_model
+            UserModel = get_user_model()
+            try:
+                user = UserModel.objects.get(email__iexact=email)
+                if user.check_password(password):
+                    if not user.is_active:
+                        raise serializers.ValidationError('User account is disabled.')
+                    if not (user.is_staff or user.is_admin or user.is_superuser):
+                        raise serializers.ValidationError('You do not have admin privileges.')
+                    attrs['user'] = user
+                    return attrs
+            except UserModel.DoesNotExist:
+                pass
+            
+            raise serializers.ValidationError('Invalid email or password.')
         else:
             raise serializers.ValidationError('Must include "email" and "password".')
 

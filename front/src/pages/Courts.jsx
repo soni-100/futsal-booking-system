@@ -4,6 +4,16 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 import { FaFutbol, FaMapMarkerAlt, FaClock, FaUsers, FaStar, FaSearch } from 'react-icons/fa'
+import eliteImage from '../images/elite.png'
+import proImage from '../images/profutsal.png'
+import champainImage from '../images/champain.png'
+
+// Image mapping for courts
+const courtImageMap = {
+  'Elite Futsal Arena': eliteImage,
+  'Pro Futsal Center': proImage,
+  'Champions Futsal': champainImage,
+}
 
 const Courts = () => {
   const [courts, setCourts] = useState([])
@@ -19,13 +29,18 @@ const Courts = () => {
   const fetchCourts = async () => {
     try {
       const response = await api.get('/courts/')
-      const courtsData = response.data.map((court) => ({
-        ...court,
-        price_per_hour: parseFloat(court.price_per_hour) || 0,
-        image: court.image_url || `https://via.placeholder.com/400x300?text=${encodeURIComponent(court.name)}`,
-        available_slots: court.available_slots || ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
-        rating: court.rating || 4.5,
-      }))
+      const courtsData = response.data.map((court) => {
+        // Use local images for known courts, otherwise use API image or placeholder
+        const imageUrl = courtImageMap[court.name] || court.image_src || court.image_url || `https://via.placeholder.com/400x300?text=${encodeURIComponent(court.name)}`
+        
+        return {
+          ...court,
+          price_per_hour: parseFloat(court.price_per_hour) || 0,
+          image: imageUrl,
+          available_slots: court.available_slots || ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
+          rating: court.rating || 4.5,
+        }
+      })
       setCourts(courtsData)
     } catch (error) {
       console.error('Error fetching courts:', error)
@@ -93,6 +108,10 @@ const Courts = () => {
                   src={court.image}
                   alt={court.name}
                   className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null
+                    e.target.src = `https://via.placeholder.com/400x300?text=${encodeURIComponent(court.name)}`
+                  }}
                 />
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-2">
@@ -114,7 +133,7 @@ const Courts = () => {
                     </div>
                     <div className="flex items-center text-gray-600">
                       <FaClock className="mr-2" />
-                      <span>${court.price_per_hour}/hour</span>
+                      <span>Rs. {court.price_per_hour}/hour</span>
                     </div>
                   </div>
 

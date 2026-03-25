@@ -29,7 +29,8 @@ const AdminLogin = () => {
     const result = await login(formData.email, formData.password)
     
     if (result.success) {
-      navigate('/admin')
+      console.log('✅ Admin login successful, redirecting to /admin')
+      navigate('/admin', { replace: true })
     } else {
       setError(result.error)
     }

@@ -45,10 +45,16 @@ export const AdminProvider = ({ children }) => {
     try {
       const response = await api.post('/auth/admin/login/', { email, password })
       const { token, admin } = response.data
+      
+      // Clear any existing user token before setting admin token
+      localStorage.removeItem('token')
+      
+      // Set admin token
       localStorage.setItem('admin_token', token)
       api.defaults.headers.common['Authorization'] = `Token ${token}`
       setAdmin(admin)
       setIsAuthenticated(true)
+      console.log('✅ Admin login successful')
       return { success: true }
     } catch (error) {
       const errData = error.response?.data
@@ -58,6 +64,8 @@ export const AdminProvider = ({ children }) => {
   }
 
   const logout = () => {
+    // Clear both user and admin tokens
+    localStorage.removeItem('token')
     localStorage.removeItem('admin_token')
     delete api.defaults.headers.common['Authorization']
     setAdmin(null)
